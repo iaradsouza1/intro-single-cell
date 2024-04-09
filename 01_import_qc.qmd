@@ -1,0 +1,39 @@
+---
+title: "Importing data and performing quality control"
+format: html
+---
+
+```{r}
+library(Seurat)
+```
+
+## Import data from Cell Ranger
+
+What information are the matrices produces by CellRanger? 
+
+[The MEX format](https://kb.10xgenomics.com/hc/en-us/articles/115000794686-How-is-the-MEX-format-used-for-the-gene-barcode-matrices)
+
+Let's import cellranger output:
+
+```{r}
+#| eval: false
+# list files 
+raw_files_dir <- "data/kidney/raw/"
+
+# Import with Read10X:
+counts <- Read10X(here::here(raw_files_dir))
+
+
+
+```
+
+
+
+
+
+## Quality control
+
+
+
+
+## Data normalization

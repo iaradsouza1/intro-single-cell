@@ -1,0 +1,31 @@
+project:
+  type: book
+
+book:
+  title: "Single-cell 101"
+  author: "Iara Souza"
+  date: "04/09/2024"
+  chapters:
+    - index.qmd
+    - intro.qmd
+    - 01_import_qc.qmd
+    - 02_clustering_and_markers.qmd
+    - 03_cell_annotation.qmd
+    - 04_data_integration.qmd
+    - references.qmd
+
+bibliography: references.bib
+
+execute: 
+  cache: true
+  warning: false
+  
+
+format:
+  html:
+    theme: cosmo
+  pdf:
+    documentclass: scrreprt
+
+
+

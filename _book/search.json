@@ -1,0 +1,51 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Single-cell 101",
+    "section": "",
+    "text": "Preface\nThis course covers the basics of single-cell RNA-seq analysis. This material was meant to be continuously improved.\nThis book is based on three main references:\n\nOrchestrating Single-Cell Analysis with Bioconductor - Basics;\nSingle-cell best practices\nBest practices for single-cell analysis across modalities (Heumos, Schaar, and Lance 2023)\n\n\n\n\n\nHeumos, Lisa, Anne C. Schaar, and Claire et al. Lance. 2023. “Best Practices for Single-Cell Analysis Across Modalities.” Nat Rev Genet 24: 550–72. https://doi.org/10.1038/s41576-023-00586-w."
+  },
+  {
+    "objectID": "intro.html",
+    "href": "intro.html",
+    "title": "1  Introduction",
+    "section": "",
+    "text": "This is a book created from markdown and executable code.\nSee Knuth (1984) for additional discussion of literate programming.\n\n1 + 1\n\n[1] 2\n\n\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97."
+  },
+  {
+    "objectID": "summary.html",
+    "href": "summary.html",
+    "title": "2  Summary",
+    "section": "",
+    "text": "In summary, this book has no content whatsoever.\n\n1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "references.html",
+    "href": "references.html",
+    "title": "References",
+    "section": "",
+    "text": "Heumos, Lisa, Anne C. Schaar, and Claire et al. Lance. 2023. “Best\nPractices for Single-Cell Analysis Across Modalities.” Nat\nRev Genet 24: 550–72. https://doi.org/10.1038/s41576-023-00586-w."
+  },
+  {
+    "objectID": "01_import_qc.html#import-data-from-cell-ranger",
+    "href": "01_import_qc.html#import-data-from-cell-ranger",
+    "title": "2  Importing data and performing quality control",
+    "section": "2.1 Import data from Cell Ranger",
+    "text": "2.1 Import data from Cell Ranger\nWhat information are the matrices produces by CellRanger?\nThe MEX format\nLet’s import cellranger output:\n\n# list files \nraw_files_dir <- \"data/kidney/raw/\"\n\n# Import with Read10X:\ncounts <- Read10X(here::here(raw_files_dir))"
+  },
+  {
+    "objectID": "01_import_qc.html#quality-control",
+    "href": "01_import_qc.html#quality-control",
+    "title": "2  Importing data and performing quality control",
+    "section": "2.2 Quality control",
+    "text": "2.2 Quality control"
+  },
+  {
+    "objectID": "01_import_qc.html#data-normalization",
+    "href": "01_import_qc.html#data-normalization",
+    "title": "2  Importing data and performing quality control",
+    "section": "2.3 Data normalization",
+    "text": "2.3 Data normalization"
+  }
+]
