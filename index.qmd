@@ -1,0 +1,9 @@
+# Preface {.unnumbered}
+
+This course covers the basics of single-cell RNA-seq analysis. This material was meant to be continuously improved. 
+
+This book is based on three main references: 
+
+- [Orchestrating Single-Cell Analysis with Bioconductor - Basics](https://bioconductor.org/books/3.13/OSCA.basic/);
+- [Single-cell best practices](https://www.sc-best-practices.org/preamble.html)
+- Best practices for single-cell analysis across modalities [@heumos2023best]
