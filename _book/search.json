@@ -11,7 +11,7 @@
     "href": "intro.html",
     "title": "1  Introduction",
     "section": "",
-    "text": "This is a book created from markdown and executable code.\nSee Knuth (1984) for additional discussion of literate programming.\n\n1 + 1\n\n[1] 2\n\n\n\n\n\n\nKnuth, Donald E. 1984. “Literate Programming.” Comput. J. 27 (2): 97–111. https://doi.org/10.1093/comjnl/27.2.97."
+    "text": "This is a book created from markdown and executable code.\nSee (knuth84?) for additional discussion of literate programming.\n\n1 + 1\n\n[1] 2"
   },
   {
     "objectID": "summary.html",
@@ -47,5 +47,40 @@
     "title": "2  Importing data and performing quality control",
     "section": "2.3 Data normalization",
     "text": "2.3 Data normalization"
+  },
+  {
+    "objectID": "01_import_qc.html",
+    "href": "01_import_qc.html",
+    "title": "2  Importing data and performing quality control",
+    "section": "",
+    "text": "3 Quality check"
+  },
+  {
+    "objectID": "01_import_qc.html#create-seurat-object-from-scratch",
+    "href": "01_import_qc.html#create-seurat-object-from-scratch",
+    "title": "2  Importing data and performing quality control",
+    "section": "2.1 Create Seurat object from scratch",
+    "text": "2.1 Create Seurat object from scratch"
+  },
+  {
+    "objectID": "02_clustering_and_markers.html",
+    "href": "02_clustering_and_markers.html",
+    "title": "3  Clustering and markers identification",
+    "section": "",
+    "text": "4 Select one sample: SRR13606301"
+  },
+  {
+    "objectID": "02_clustering_and_markers.html#motivation",
+    "href": "02_clustering_and_markers.html#motivation",
+    "title": "3  Clustering and markers identification",
+    "section": "3.1 Motivation",
+    "text": "3.1 Motivation\nThis document summarises the basics to normalize, find variable genes, perform principal component analysis, cluster cells by gene expression, and perform other dimensionality reductions such as UMAP and t-SNE.\nOne critical step in any single-cell analysis consists in identifying the set of highly variable genes. These genes will direct further steps and therefore, it is essential to pay attention to the results obtained."
+  },
+  {
+    "objectID": "02_clustering_and_markers.html#now-lets-pipe-all-operations",
+    "href": "02_clustering_and_markers.html#now-lets-pipe-all-operations",
+    "title": "3  Clustering and markers identification",
+    "section": "7.1 Now, let’s pipe all operations",
+    "text": "7.1 Now, let’s pipe all operations\n\nload(\"results/sc_qc.rda\")\nsc_qc_SRR13606306 <- subset(sc_qc, orig.ident == \"SRR13606306\")\n\nsc_qc_SRR13606306 <- sc_qc_SRR13606306 %>% \n  NormalizeData(normalization.method = \"LogNormalize\", scale.factor = 10000) %>% \n  FindVariableFeatures() %>% \n  ScaleData() %>% # By default it takes the HVG\n  RunPCA() %>% \n  FindNeighbors(reduction = \"pca\", dims = 1:20) %>% \n  FindClusters(resolution = 0.5) %>% \n  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>% \n  RunTSNE(dims = 1:20, n.components = 2, seed.use = 123)\n\nPlot the data embedded on the three dimensionality reductions performed:\n\nDimPlot(sc_qc_SRR13606306, reduction = \"pca\")\nDimPlot(sc_qc_SRR13606306, reduction = \"tsne\")\nDimPlot(sc_qc_SRR13606306, reduction = \"umap\")\n\nSave\n\nsave(sc_qc_SRR13606306, file = \"results/sc_qc_SRR13606306_findclusters.rda\")"
   }
 ]

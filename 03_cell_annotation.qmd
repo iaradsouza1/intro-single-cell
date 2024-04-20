@@ -2,3 +2,13 @@
 title: "Cell annotation"
 format: html
 ---
+
+```{r}
+library(Seurat)
+library(tidyverse)
+```
+
+```{r}
+load("results/sc_qc_SRR13606306_findclusters.rda")
+```
+

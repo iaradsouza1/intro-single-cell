@@ -17,6 +17,7 @@ book:
 bibliography: references.bib
 
 execute: 
+  eval: false
   cache: true
   warning: false
   

@@ -5,35 +5,167 @@ format: html
 
 ```{r}
 library(Seurat)
+library(SingleCellExperiment)
+library(scDblFinder)
+library(tidyverse)
+
+if(!dir.exists("results/")) {
+  dir.create("results/")
+}
 ```
 
-## Import data from Cell Ranger
-
-What information are the matrices produces by CellRanger? 
-
-[The MEX format](https://kb.10xgenomics.com/hc/en-us/articles/115000794686-How-is-the-MEX-format-used-for-the-gene-barcode-matrices)
-
-Let's import cellranger output:
+## Create Seurat object from scratch
 
 ```{r}
 #| eval: false
-# list files 
-raw_files_dir <- "data/kidney/raw/"
+#| echo: false
 
-# Import with Read10X:
-counts <- Read10X(here::here(raw_files_dir))
+samples <- sapply(strsplit(list.dirs("data/emt", recursive = F), split = "\\/"), "[[", 3)
+group <- c("TGFbeta1_8day", "TGFbeta1_4day", "TGFbeta1_3day", "TGFbeta1_2day",
+           "TGFbeta1_1day", "notreated", "notreated")
+batch <- c("1", "1", "2", "2", "2", "1", "2")
 
+# Matrices directories
+dir <- paste0("data/emt/", samples)
+names(dir) <- samples
 
+# Read each matrix into a separate object
+data <- lapply(dir, Read10X)
 
+# Create an SeuratObject for each matrix
+ls_sc <- pmap(list(data, samples, group, batch), function(x, y, z, w) {
+  CreateSeuratObject(x, project = y, min.cells = 3, min.features = 200, 
+                     meta.data = data.frame(cells = colnames(x), 
+                                            group = z,
+                                            batch = w) %>% 
+                       column_to_rownames("cells"))
+})
+
+# Merge them all
+sc <- merge(ls_sc[[1]], y = ls_sc[2:length(ls_sc)], project = "all_samples")
+
+# Save object
+save(sc, file = "results/sc_noqc_unmerged_layers.rda")
 ```
 
+# Quality check
 
+## Remove doublets with `scDblFinder`
 
+```{r, eval=FALSE}
+# This step was not run as the datasets was shared with a already preprocessed version of
+# the count table. Standard Seurat workflow for single-cell analysis was performed. 
 
+# The SingleCellExperiment does not handle the layers attribute implemented on Seurat v5. 
+# We need to join the layers and analyze the data of all samples as a whole
+sc <- JoinLayers(sc)
 
-## Quality control
+# Convert Seurat object into SingleCellExperiment
+sce <- as.SingleCellExperiment(sc)
 
+# Remove doublets using the scDblFinder
+set.seed(123)
+results <- scDblFinder(sce, returnType = 'table') %>%
+  as.data.frame() %>%
+  dplyr::filter(type == "real")
 
+# Count how many doublets are
+results %>% 
+  dplyr::count(class)
 
+# Keep only the singlets
+keep <- results %>% 
+  dplyr::filter(class == "singlet") %>% 
+  rownames()
 
-## Data normalization
+sc <- sc[, keep]
+```
+
+## Calculate the percentage of mitochondrial genes
+
+```{r}
+# Identfy the percentage of mitocondrial genes in each cell
+sc[["percent.mt"]] <- PercentageFeatureSet(sc, pattern = "^MT-")
+
+# Violin plot of feature counts and molecules counts
+VlnPlot(sc, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+```
+
+## Compare the number of features (genes) and the number of molecules by cell
+
+```{r}
+# Use the FetchData to retrieve a dataframe with counts information
+sc.qc <- FetchData(sc, vars = c("nFeature_RNA", "nCount_RNA", "percent.mt"))
+
+# Distribution of the number of molecules
+sc.qc %>%
+  ggplot() +
+  geom_vline(aes(xintercept = median(sc.qc$nCount_RNA)), color = "red") +
+  geom_histogram(aes(x = nCount_RNA), bins = 100)
+
+# Mean number of RNA molecules and genes per cell
+summary(sc.qc$nCount_RNA)
+summary(sc.qc$nFeature_RNA)
+
+# Plot the distribution of features (genes) - all samples
+sc.qc %>%
+  ggplot() +
+  geom_vline(aes(xintercept = median(sc.qc$nFeature_RNA)), color = "red") +
+  geom_histogram(aes(x = nFeature_RNA), bins = 200)
+
+# Plot the distribution of features (genes) - by samples
+sc.qc %>%
+  mutate(group = sc@meta.data$orig.ident) %>% 
+  ggplot() +
+  geom_histogram(aes(x = nFeature_RNA, fill = group), bins = 200) +
+  scale_x_log10()
+
+# Plot the distribution of mitochondrial genes 
+sc.qc %>%
+  ggplot() +
+  geom_histogram(aes(x = percent.mt), bins = 100) +
+  geom_vline(xintercept = 10, color = "red")
+
+summary(sc.qc$percent.mt)
+
+# Scatter plot of the relationship of number of molecules and the percent of MT genes
+FeatureScatter(sc, feature1 = "nCount_RNA", feature2 = "percent.mt", group.by = "orig.ident")
+
+# Scatter plot of the relationship of number of molecules and the number of features
+FeatureScatter(sc, feature1 = "nCount_RNA", feature2 = "nFeature_RNA", group.by = "orig.ident")
+
+sc.qc %>%
+  ggplot() +
+  geom_point(aes(nCount_RNA, nFeature_RNA, colour = percent.mt), alpha = .50) +
+  scale_x_log10() +
+  scale_y_log10()
+```
+
+## Filter cells  
+
+```{r}
+# Keep only the cells with nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10
+sc.qc <- sc.qc %>%
+  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10, "keep", "remove"))
+
+sc.qc %>% 
+  count(keep)
+  
+sc.qc %>% 
+  ggplot() +
+  geom_point(aes(nCount_RNA, nFeature_RNA, colour = keep), alpha = .30) +
+  scale_x_log10() +
+  scale_y_log10()
+
+sc_qc <- subset(sc, nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10)
+
+save(sc_qc, file = "results/sc_qc.rda")
+```
+
+# Split the layers (for integration step)
+
+```{r}
+sc_qc_split <- split(sc_qc[["RNA"]], f = sc_qc$orig.ident)
+save(sc_qc_split, file = "results/sc_qc_split.rda")
+```
+

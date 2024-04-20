@@ -1,0 +1,13 @@
+name: intro-single-cell
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-seurat
+  - r-tidyverse
+  - r-vroom
+  - r-devtools
+  - bioconductor-singlecellexperiment
+  - bioconductor-scdblfinder
+  - r-harmony

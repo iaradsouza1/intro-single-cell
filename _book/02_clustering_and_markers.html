@@ -20,6 +20,69 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1.6em;
   vertical-align: middle;
 }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
 </style>
 
 
@@ -133,7 +196,20 @@ ul.task-list li input[type="checkbox"] {
 </nav>
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
-        
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#motivation" id="toc-motivation" class="nav-link active" data-scroll-target="#motivation"><span class="toc-section-number">3.1</span>  Motivation</a></li>
+  <li><a href="#select-one-sample-srr13606301" id="toc-select-one-sample-srr13606301" class="nav-link" data-scroll-target="#select-one-sample-srr13606301"><span class="toc-section-number">4</span>  Select one sample: SRR13606301</a></li>
+  <li><a href="#normalize-data-and-find-the-highly-variable-genes" id="toc-normalize-data-and-find-the-highly-variable-genes" class="nav-link" data-scroll-target="#normalize-data-and-find-the-highly-variable-genes"><span class="toc-section-number">5</span>  Normalize data and find the highly variable genes</a></li>
+  <li><a href="#run-pca" id="toc-run-pca" class="nav-link" data-scroll-target="#run-pca"><span class="toc-section-number">6</span>  Run PCA</a></li>
+  <li><a href="#cluster-cells-with-findneighbors-and-findclusters" id="toc-cluster-cells-with-findneighbors-and-findclusters" class="nav-link" data-scroll-target="#cluster-cells-with-findneighbors-and-findclusters"><span class="toc-section-number">7</span>  Cluster cells with <code>FindNeighbors</code> and <code>FindClusters</code></a>
+  <ul class="collapse">
+  <li><a href="#now-lets-pipe-all-operations" id="toc-now-lets-pipe-all-operations" class="nav-link" data-scroll-target="#now-lets-pipe-all-operations"><span class="toc-section-number">7.1</span>  Now, let’s pipe all operations</a></li>
+  </ul></li>
+  </ul>
+</nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
@@ -155,8 +231,104 @@ ul.task-list li input[type="checkbox"] {
 
 </header>
 
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-1_3f394e33ec5d552ac77f99458cd50df0">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Seurat)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RedeR)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(igraph)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="motivation" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="motivation"><span class="header-section-number">3.1</span> Motivation</h2>
+<p>This document summarises the basics to normalize, find variable genes, perform principal component analysis, cluster cells by gene expression, and perform other dimensionality reductions such as UMAP and t-SNE.</p>
+<p>One critical step in any single-cell analysis consists in identifying the set of highly variable genes. These genes will direct further steps and therefore, it is essential to pay attention to the results obtained.</p>
+</section>
+<section id="select-one-sample-srr13606301" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Select one sample: SRR13606301</h1>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-2_d112db3b091870a710ea5aee8463e42b">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"results/sc_qc.rda"</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">subset</span>(sc_qc, orig.ident <span class="sc">==</span> <span class="st">"SRR13606306"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="normalize-data-and-find-the-highly-variable-genes" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Normalize data and find the highly variable genes</h1>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-3_14fbdf87a444f30f83fcfa6258e8bbbd">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">NormalizeData</span>(sc_qc_SRR13606306, </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">assay =</span> <span class="st">"RNA"</span>,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>                                   <span class="at">normalization.method =</span> <span class="st">"LogNormalize"</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">FindVariableFeatures</span>(sc_qc_SRR13606306, </span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">assay =</span> <span class="st">"RNA"</span>, </span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">selection.method =</span> <span class="st">"vst"</span>, </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>                                          <span class="at">nfeatures =</span> <span class="dv">2000</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="run-pca" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Run PCA</h1>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-4_af28b6a05b75a3e2f6a296a20938b556">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">ScaleData</span>(sc_qc_SRR13606306, </span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>                               <span class="at">features =</span> <span class="fu">VariableFeatures</span>(sc_qc_SRR13606306),</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>                               <span class="at">assay =</span> <span class="st">"RNA"</span>)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">RunPCA</span>(sc_qc_SRR13606306, <span class="at">features =</span> <span class="fu">VariableFeatures</span>(sc_qc_SRR13606306))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Get the 5 most important genes for PCs 1 to 5</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(sc_qc_SRR13606306[[<span class="st">"pca"</span>]], <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, <span class="at">nfeatures =</span> <span class="dv">5</span>)</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the 30 more important genes to PCs 1 and 2</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="fu">VizDimLoadings</span>(sc_qc_SRR13606306, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>, <span class="at">reduction =</span> <span class="st">"pca"</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Heatmap</span></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="fu">DimHeatmap</span>(sc_qc_SRR13606306, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span>)</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ElbowPlot</span>(sc_qc_SRR13606306)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="cluster-cells-with-findneighbors-and-findclusters" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Cluster cells with <code>FindNeighbors</code> and <code>FindClusters</code></h1>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-5_d954a8ede3c5ccb3f715ffe4d98d18f4">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">FindNeighbors</span>(sc_qc_SRR13606306, <span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">FindClusters</span>(sc_qc_SRR13606306, <span class="at">resolution =</span> <span class="fl">0.8</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-6_9b9a10e92e8d70135f6992c14325521d">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(RedeR)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(igraph)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>g <span class="ot">&lt;-</span> sc_qc_SRR13606306<span class="sc">@</span>graphs<span class="sc">$</span>RNA_nn <span class="sc">%&gt;%</span> igraph<span class="sc">::</span><span class="fu">graph_from_adjacency_matrix</span>()</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>rdp <span class="ot">&lt;-</span> <span class="fu">RedPort</span>()</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">calld</span>(rdp)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="fu">addGraph</span>(rdp, g)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p><img src="figs/nn.png" class="img-fluid"></p>
+<section id="now-lets-pipe-all-operations" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="now-lets-pipe-all-operations"><span class="header-section-number">7.1</span> Now, let’s pipe all operations</h2>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-7_c064e5f3f1b6af08c260b4b6fa7646c2">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"results/sc_qc.rda"</span>)</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> <span class="fu">subset</span>(sc_qc, orig.ident <span class="sc">==</span> <span class="st">"SRR13606306"</span>)</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>sc_qc_SRR13606306 <span class="ot">&lt;-</span> sc_qc_SRR13606306 <span class="sc">%&gt;%</span> </span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">NormalizeData</span>(<span class="at">normalization.method =</span> <span class="st">"LogNormalize"</span>, <span class="at">scale.factor =</span> <span class="dv">10000</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FindVariableFeatures</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ScaleData</span>() <span class="sc">%&gt;%</span> <span class="co"># By default it takes the HVG</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">RunPCA</span>() <span class="sc">%&gt;%</span> </span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FindNeighbors</span>(<span class="at">reduction =</span> <span class="st">"pca"</span>, <span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">FindClusters</span>(<span class="at">resolution =</span> <span class="fl">0.5</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">RunUMAP</span>(<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="at">n.components =</span> <span class="dv">2</span>, <span class="at">seed.use =</span> <span class="dv">123</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">RunTSNE</span>(<span class="at">dims =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">20</span>, <span class="at">n.components =</span> <span class="dv">2</span>, <span class="at">seed.use =</span> <span class="dv">123</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Plot the data embedded on the three dimensionality reductions performed:</p>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-8_127239388fc99718625c35623f0161d8">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(sc_qc_SRR13606306, <span class="at">reduction =</span> <span class="st">"pca"</span>)</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(sc_qc_SRR13606306, <span class="at">reduction =</span> <span class="st">"tsne"</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">DimPlot</span>(sc_qc_SRR13606306, <span class="at">reduction =</span> <span class="st">"umap"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Save</p>
+<div class="cell" data-hash="02_clustering_and_markers_cache/html/unnamed-chunk-9_6b9c9a23a7253629dc9265979cf97a72">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">save</span>(sc_qc_SRR13606306, <span class="at">file =</span> <span class="st">"results/sc_qc_SRR13606306_findclusters.rda"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
 
 
+</section>
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

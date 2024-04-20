@@ -2,3 +2,195 @@
 title: "Clustering and markers identification"
 format: html
 ---
+
+```{r}
+library(Seurat)
+library(RedeR)
+library(igraph)
+library(scCustomize)
+```
+
+## Motivation
+
+This document summarises the basics to normalize, find variable genes, perform principal component analysis, cluster cells by gene expression, and perform other dimensionality reductions such as UMAP and t-SNE. 
+
+One critical step in any single-cell analysis consists in identifying the set of highly variable genes. These genes will direct further steps and therefore, it is essential to pay attention to the results obtained.
+
+# Select one sample: SRR13606301
+
+```{r}
+load("results/sc_qc.rda")
+sc_qc_SRR13606306 <- subset(sc_qc, orig.ident == "SRR13606306")
+```
+
+# Normalize data and find the highly variable genes
+
+```{r}
+sc_qc_SRR13606306 <- NormalizeData(sc_qc_SRR13606306, 
+                                   assay = "RNA",
+                                   normalization.method = "LogNormalize")
+sc_qc_SRR13606306
+sc_qc_SRR13606306 <- FindVariableFeatures(sc_qc_SRR13606306, 
+                                          assay = "RNA", 
+                                          selection.method = "vst", 
+                                          nfeatures = 2000)
+```
+
+```{r}
+VariableFeaturePlot_scCustom(sc_qc_SRR13606306)
+```
+
+```{r}
+hvf_info <- HVFInfo(sc_qc_SRR13606306)
+```
+
+
+# Run PCA
+
+```{r}
+sc_qc_SRR13606306 <- ScaleData(sc_qc_SRR13606306, 
+                               features = VariableFeatures(sc_qc_SRR13606306),
+                               assay = "RNA")
+sc_qc_SRR13606306
+sc_qc_SRR13606306 <- RunPCA(sc_qc_SRR13606306, features = VariableFeatures(sc_qc_SRR13606306))
+
+# Get the 5 most important genes for PCs 1 to 5
+print(sc_qc_SRR13606306[["pca"]], dims = 1:5, nfeatures = 5)
+
+# Plot the 30 more important genes to PCs 1 and 2
+VizDimLoadings(sc_qc_SRR13606306, dims = 1:2, reduction = "pca")
+
+# Heatmap
+DimHeatmap(sc_qc_SRR13606306, reduction = "pca", dims = 1)
+
+ElbowPlot(sc_qc_SRR13606306)
+```
+
+# Cluster cells with `FindNeighbors` and `FindClusters`
+
+```{r}
+sc_qc_SRR13606306 <- FindNeighbors(sc_qc_SRR13606306, reduction = "pca", dims = 1:20)
+sc_qc_SRR13606306 <- FindClusters(sc_qc_SRR13606306, resolution = 0.8)
+```
+
+```{r}
+#| eval: false
+library(RedeR)
+library(igraph)
+
+g <- sc_qc_SRR13606306@graphs$RNA_nn %>% igraph::graph_from_adjacency_matrix()
+
+rdp <- RedPort()
+calld(rdp)
+addGraph(rdp, g)
+```
+
+![](figs/nn.png)
+
+## Now, let's pipe all operations
+
+```{r}
+sc_qc_SRR13606306 <- subset(sc_qc, orig.ident == "SRR13606306")
+
+sc_qc_SRR13606306 <- sc_qc_SRR13606306 %>% 
+  NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>% # By default it takes the HVG
+  RunPCA() %>% 
+  FindNeighbors(reduction = "pca", dims = 1:20) %>% 
+  FindClusters(resolution = 0.3) %>% 
+  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>% 
+  RunTSNE(dims = 1:20, n.components = 2, seed.use = 123)
+```
+
+Plot the data embedded on the three dimensionality reductions performed:  
+
+```{r}
+DimPlot(sc_qc_SRR13606306, reduction = "pca")
+DimPlot(sc_qc_SRR13606306, reduction = "tsne")
+DimPlot(sc_qc_SRR13606306, reduction = "umap")
+```
+
+## Or use the SCTransform function
+
+The `SCTransform` function aims to perform normalization with a variance stabilization transformation approach. This function replaces the  `NormalizeData()`, `ScaleData()`, and `FindVariableFeatures()` functions, and once we run it, it creates the SCT assay slot. By default, the `SCTransform` function select the first 3000 HVG.
+
+```{r}
+sc_qc_SRR13606306_sct  <- sc_qc_SRR13606306 %>% 
+  SCTransform() %>% 
+  RunPCA() %>% 
+  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>%
+  RunTSNE(dims = 1:20, n.components = 2, seed.use = 123) %>%
+  FindNeighbors(dims = 1:20) %>% 
+  FindClusters(resolution = 0.3)
+```
+
+```{r}
+DimPlot(sc_qc_SRR13606306_sct, reduction = "pca")
+DimPlot(sc_qc_SRR13606306_sct, reduction = "tsne")
+DimPlot(sc_qc_SRR13606306_sct, reduction = "umap")
+```
+
+```{r}
+hvg_1 <- VariableFeatures(sc_qc_SRR13606306, assay = "RNA", nfeatures = 500)
+hvg_2 <- VariableFeatures(sc_qc_SRR13606306_sct, assay = "SCT", nfeatures = 500)
+
+length(intersect(hvg_1, hvg_2))
+```
+
+```{r}
+DimPlot(sc_qc_SRR13606306, reduction = "pca") + DimPlot(sc_qc_SRR13606306_sct, reduction = "pca")
+```
+
+Save:
+
+```{r}
+save(sc_qc_SRR13606306, file = "results/sc_qc_SRR13606306_findclusters.rda")
+```
+
+From now on, we're using the data from the `SCTransform` function.
+
+## Find gene markers
+
+The `FindMarkers` function compares the expression of a given cluster to all other cells. For example, to find markers for cluster 1, it takes the expression of gene A on cluster 1 and compares to the expression of this gene on cells that are not part of cluster 1. The `FindMarkers` function only considers the HVGs. By default, the function uses the Wilcoxon Rank Sum Test, a non-parametric test to compare the gene expression distributions between the groups of cells. 
+
+```{r}
+cluster_markers <- FindAllMarkers(sc_qc_SRR13606306_sct, test.use = "wilcox", min.pct = 0.01)
+```
+
+Add differences in percentages, filter only the positive differences:
+
+```{r}
+cluster_markers <- cluster_markers %>% 
+  mutate(diff_pct = pct.1 - pct.2) %>% 
+  arrange(desc(diff_pct)) %>% 
+  filter(diff_pct > 0)
+```
+
+```{r}
+cluster_markers %>% 
+  group_by(cluster) %>% 
+  slice_max(n = 10, order_by = diff_pct) -> candidates
+```
+
+Feature plots: 
+
+```{r}
+lapply(unique(candidates$cluster), function(x) {
+  FeaturePlot_scCustom(sc_qc_SRR13606306_sct, 
+                       features = candidates$gene[candidates$cluster == x]) +
+  DimPlot(sc_qc_SRR13606306_sct, reduction = "umap")
+}) -> ls_feature_plots
+names(ls_feature_plots) <- paste0("cluster", unique(candidates$cluster))
+```
+
+Violin plots: 
+
+```{r}
+lapply(unique(candidates$cluster), function(x) {
+  VlnPlot_scCustom(sc_qc_SRR13606306_sct, 
+                   features = candidates$gene[candidates$cluster == x])
+}) -> ls_vln_plots
+names(ls_vln_plots) <- paste0("cluster", unique(candidates$cluster))
+```
+
