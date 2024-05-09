@@ -8,6 +8,10 @@ dependencies:
   - r-tidyverse
   - r-vroom
   - r-devtools
+  - r-harmony
   - bioconductor-singlecellexperiment
   - bioconductor-scdblfinder
-  - r-harmony
+  - bioconductor-singler
+  - bioconductor-aucell
+  - bioconductor-celldex
+  - openssl=3.1.3

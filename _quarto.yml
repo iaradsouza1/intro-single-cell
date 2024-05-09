@@ -3,11 +3,10 @@ project:
 
 book:
   title: "Single-cell 101"
-  author: "Iara Souza"
+  author: "Dalmolin Systems Biology Group"
   date: "04/09/2024"
   chapters:
     - index.qmd
-    - intro.qmd
     - 01_import_qc.qmd
     - 02_clustering_and_markers.qmd
     - 03_cell_annotation.qmd
@@ -17,7 +16,6 @@ book:
 bibliography: references.bib
 
 execute: 
-  eval: false
   cache: true
   warning: false
   

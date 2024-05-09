@@ -2,3 +2,19 @@
 title: "Data integration"
 format: html
 ---
+
+# Motivation
+
+The integration process means to remove unwanted differences between samples, so we can compare the cell types. 
+
+The most important assumption:
+
+- If we are integrating different samples, we are assuming they have the same cell's content (e.g. the cell type A is present at the same proportion in samples X an Y).
+
+# Possible ways of performing integration
+
+https://www.nature.com/articles/s41467-023-37126-3
+https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+
+
+# 
