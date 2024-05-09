@@ -6,4 +6,4 @@
 /.quarto/
 /data/
 /results/
-/_book/
+_book/*
