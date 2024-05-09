@@ -6,7 +6,6 @@ This book is based on the following references:
 
 - [Orchestrating Single-Cell Analysis with Bioconductor - Basics](https://bioconductor.org/books/3.13/OSCA.basic/);
 - [Single-cell best practices](https://www.sc-best-practices.org/preamble.html)
-- Best practices for single-cell analysis across modalities [@heumos2023best]
 - [Seurat cheatsheet](https://satijalab.org/seurat/articles/essential_commands.html)
 - [SingleR](https://bioconductor.org/books/release/SingleRBook/)
 
