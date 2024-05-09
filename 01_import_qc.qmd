@@ -3,42 +3,44 @@ title: "Importing data and performing quality control"
 format: html
 ---
 
+## Motivation
+
+Single-cell quality control is a crucial step in single-cell analysis. In this step, we identify and filter out poor-quality cells, which may arise due to technical artifacts, biological variability, or experimental conditions. Effective quality control helps to improve downstream analysis accuracy and interpretation by ensuring that only high-quality cells are included in the next steps. It is important to note that quality check is an interactive process integrated into the entire scRNA-seq analysis workflow. As data processing steps may influence quality metrics, re-assessment of quality after each processing step is essential.
+
+There are some essential things to check on your data before doing more robust analyses:
+
+ - **Gene Detection Rate**: The number of genes detected in each cell, indicating the cell's transcriptional activity. Low gene detection rates may suggest poor-quality cells or technical issues.
+ - **Unique Molecular Identifier (UMI) Counts**: UMI counts reflect the depth of sequencing and can indicate the quality of library preparation.
+ - **Mitochondrial Gene Expression**: Higher expression of mitochondrial genes relative to nuclear genes can indicate stress or cell damage.
+ - **Library Size**: The total number of UMIs or reads per cell, providing an overall measure of data quality and sequencing depth.
+ - **Doublet Detection**: Identification of potential cell doublets, where two cells are erroneously captured and sequenced together as one. Doublets can skew downstream analyses.
+
+## Create Seurat object from scratch
+
 ```{r}
 library(Seurat)
 library(SingleCellExperiment)
 library(scDblFinder)
 library(tidyverse)
-
-if(!dir.exists("results/")) {
-  dir.create("results/")
-}
 ```
 
-## Create Seurat object from scratch
-
 ```{r}
-#| eval: false
-#| echo: false
-
-samples <- sapply(strsplit(list.dirs("data/emt", recursive = F), split = "\\/"), "[[", 3)
-group <- c("TGFbeta1_8day", "TGFbeta1_4day", "TGFbeta1_3day", "TGFbeta1_2day",
-           "TGFbeta1_1day", "notreated", "notreated")
-batch <- c("1", "1", "2", "2", "2", "1", "2")
+samples <- c("GSM5102900", "GSM5102901", "GSM5102902", "GSM5102903")
+group <- c("healthy", "healthy", "non-survival-sepsis", "non-survival-sepsis")
 
 # Matrices directories
-dir <- paste0("data/emt/", samples)
+dir <- paste0("data/sepsis/", samples)
 names(dir) <- samples
 
 # Read each matrix into a separate object
 data <- lapply(dir, Read10X)
 
 # Create an SeuratObject for each matrix
-ls_sc <- pmap(list(data, samples, group, batch), function(x, y, z, w) {
+ls_sc <- pmap(list(data, samples, group), function(x, y, z) {
   CreateSeuratObject(x, project = y, min.cells = 3, min.features = 200, 
                      meta.data = data.frame(cells = colnames(x), 
-                                            group = z,
-                                            batch = w) %>% 
-                       column_to_rownames("cells"))
+                                            group = z) %>%
+                       tibble::column_to_rownames("cells"))
 })
 
 # Merge them all
@@ -48,16 +50,16 @@ sc <- merge(ls_sc[[1]], y = ls_sc[2:length(ls_sc)], project = "all_samples")
 save(sc, file = "results/sc_noqc_unmerged_layers.rda")
 ```
 
-# Quality check
+## Quality check
 
-## Remove doublets with `scDblFinder`
+### Remove doublets with `scDblFinder`
 
-```{r, eval=FALSE}
+```{r}
 # This step was not run as the datasets was shared with a already preprocessed version of
 # the count table. Standard Seurat workflow for single-cell analysis was performed. 
 
 # The SingleCellExperiment does not handle the layers attribute implemented on Seurat v5. 
-# We need to join the layers and analyze the data of all samples as a whole
+# We need to join the layers to perform QC analysis of all samples as a whole
 sc <- JoinLayers(sc)
 
 # Convert Seurat object into SingleCellExperiment
@@ -81,7 +83,7 @@ keep <- results %>%
 sc <- sc[, keep]
 ```
 
-## Calculate the percentage of mitochondrial genes
+### Calculate the percentage of mitochondrial genes
 
 ```{r}
 # Identfy the percentage of mitocondrial genes in each cell
@@ -91,7 +93,7 @@ sc[["percent.mt"]] <- PercentageFeatureSet(sc, pattern = "^MT-")
 VlnPlot(sc, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 ```
 
-## Compare the number of features (genes) and the number of molecules by cell
+### Compare the number of features (genes) and the number of molecules by cell
 
 ```{r}
 # Use the FetchData to retrieve a dataframe with counts information
@@ -141,15 +143,15 @@ sc.qc %>%
   scale_y_log10()
 ```
 
-## Filter cells  
+### Filter cells  
 
 ```{r}
 # Keep only the cells with nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10
 sc.qc <- sc.qc %>%
-  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10, "keep", "remove"))
+  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 4000 & percent.mt < 10, "keep", "remove"))
 
 sc.qc %>% 
-  count(keep)
+  dplyr::count(keep)
   
 sc.qc %>% 
   ggplot() +
@@ -162,7 +164,7 @@ sc_qc <- subset(sc, nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10)
 save(sc_qc, file = "results/sc_qc.rda")
 ```
 
-# Split the layers (for integration step)
+### Split the layers (for integration step)
 
 ```{r}
 sc_qc_split <- split(sc_qc[["RNA"]], f = sc_qc$orig.ident)

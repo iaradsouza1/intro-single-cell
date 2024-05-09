@@ -1,14 +1,148 @@
 ---
-title: "Cell annotation"
+title: "Cell type annotation"
 format: html
+
 ---
+
+## Motivation
+
+A primordial task in a single-cell RNA-seq experiment is to determine the cell types in a sample. To do that, we can proceed with different approaches. In the **knowledge-based** (or **marker-based**) approach, we used previous validated information about cell markers to check which cells are enriched for this set of markers, infering that a given cluster of cells belong to that cell type. In this approach we heavily rely on previous knowledge of cell type markers. 
+
+In some cases, it is hard to label cells based only on a small subset of markers. Also, some cell types do not have established markers, making it difficult to label them. Therefore, we can use the **reference-based** approach, which takes advantage of previous well-annotated resources, such as cell atlases, as a basis to classify each cell in a given cell type. In this reference-based approach, a matrix of cell gene expression (cells in columns and genes in rows) with defined cell types is the trained set and it is used to classify the cell types of another matrix. The reference matrix can be obtained from microarray experiments as well as bulk or single-cell RNA sequencing experiments.
+
+For the reference-based annotation, we're using the `singleR` and `celldex` R/Bioconductor packages. `singleR` implements the correlation tests to check similarities between the reference and the test set. `celldex` gives a comprehensive reference datasets for different tissues. 
+
+## Reference-based annotation with `singleR`
 
 ```{r}
 library(Seurat)
+library(SingleR)
+library(celldex)
 library(tidyverse)
+library(scran)
+library(AUCell)
+library(GSEABase)
 ```
 
 ```{r}
-load("results/sc_qc_SRR13606306_findclusters.rda")
+load("results/sc_qc_GSM5102900_SCT_clusters.rda")
+```
+
+Here, we load the reference dataset. `ref` is a `SummarizedExperiment` object from Bioconductor. This objects is meant to hold gene expression information. The reference matrix **must** contain log-transformed normalized expression values if you're using the default parameters.
+
+```{r}
+ref <- BlueprintEncodeData()
+ref
+```
+
+Create SCE object from the Seurat object:
+
+```{r}
+sce <- as.SingleCellExperiment(sc_qc_GSM5102900_sct)
+```
+
+Predict the cell labels for the test matrix (with log transformed counts) based on the reference matrix:
+
+```{r}
+predictions <- SingleR(test = sce, assay.type.test = "logcounts", ref = ref, labels = ref$label.main)
+```
+
+The classification algorithm from `singleR` function is the following: 
+
+For each cell (each column) on the test matrix:
+
+- Perform the Spearman's correlation with each sample from the reference. The correlation is performed in the set of marker genes that are obtained by comparing the samples from each label in a pairwise way (similar to what we do to find marker genes after cluster identification). 
+- If the reference label has multiple samples for each cell type, the per-label score is a fixed quantile (0.8 by default) of the correlations across different samples. This way we get a single value for the correlation of the gene expression for a given cell and a given label. This is done for all labels in the reference dataset. 
+- The label attributed to a cell is the highest score across all labels.
+- There's an optional fine-tunning step to improve annotation resolution. In this step, the reference dataset is subseted to include the highest scores. These scores are recomputed using only the marker genes identified among the samples from the reference dataset. 
+
+Now let's check the scores by cell:
+
+```{r}
+plotScoreHeatmap(predictions)
+```
+
+The heatmap shows the scores calculated for each cell on our test matrix (the columns) when compared to the reference cell types (the rows). The labels (on top) represent the predicted cell types. Ideally, we want find the highest cell scores for only one cell type, meaning that the cell is well annotated. However, observe that there's an overlap of gene expression profile between CD4+, CD8+ T-cells and NK cells. This can be acceptable if the cell types are closely related. 
+
+```{r}
+plotDeltaDistribution(predictions, ncol = 3)
+```
+
+Another way of evaluating ambiguous labeling is comparing the difference between the assigned score and the median score across all labels. The median score represents the baseline score and the aforementioned difference (or the *delta*) is a measure of confidence assignment, with low delta indicating uncertainty of the assignment and the high deltas indicating a more confidence on cell assignment. 
+
+```{r}
+remove <- is.na(predictions$pruned.labels)
+table(Label = predictions$labels, Remove = remove)
+```
+
+```{r}
+plotDeltaDistribution(predictions, show = "delta.med", ncol = 3)
+```
+
+Cells identified as outliers on the fine-tuning stage are potentially more uncertainly assigned to the that cell type. We can adjust the delta threshold to account for the "certainty" of cell type labelling:
+
+```{r}
+remove <- pruneScores(predictions, min.diff.med = 0.2)
+table(Label = predictions$labels, Remove = remove)
+```
+
+### Compare the annotation for each cell with markers
+
+Since we had a higher number of monocytes with potential ambiguous annotation, lets check the distribution of gene expression of the monocyte markers across the cell types.
+
+```{r}
+all_markers <- metadata(predictions)$de.genes
+monocyte_markers <- unique(unlist(all_markers$Monocytes))
+
+sce$labels <- predictions$labels
+plotHeatmap(sce, order_columns_by = "labels", features = monocyte_markers)
+```
+
+Now, lets get the canonical markers from the cellxgene database (link [here](https://cellxgene.cziscience.com/cellguide/CL:0001054)):
+
+```{r}
+# Get the markers for a classical CD14+-monocytes
+monocyte_markers_cxg <- c("CD14", "CST3", "FCN1", "S100A8", "S100A9")
+plotHeatmap(sce, order_columns_by = "labels", features = monocyte_markers_cxg)
+```
+
+## Marker-based approach with AUCell
+
+The AUCell R/Bioconductor package uses a similar approach as the `scoreMarkers` function (see @sec-). The idea is to rank the genes of a given cell based on their expression values and to compare how many marker genes appear in the highest ranks. Then, it computes the area under the curve (AUC) for each marker and it quantifies the enrichment of the markers among the highest expressed genes in that cell. 
+
+Suppose that we have a list of marker genes from different cell types. This information can come from different sources, such as the [cellxgene](https://cellxgene.cziscience.com/) database. Here, we're using the markers stored on `all_markers` computed when performing pairwise comparisons among the different cell types:
+
+```{r}
+markers <- lapply(all_markers, function(x) unique(unlist(x)))
+
+# Create the gene sets
+all_sets <- lapply(names(markers), function(x) {
+    GeneSet(markers[[x]], setName = x)        
+})
+all_sets <- GeneSetCollection(all_sets)
+
+rankings <- AUCell_buildRankings(counts(sce), plotStats = FALSE)
+cell_aucs <- AUCell_calcAUC(all_sets, rankings)
+results <- t(assay(cell_aucs))
+head(results)
+```
+
+We calculated an enrichment score (represented by AUC) for each cell and the cell types and the associated markers we provided. In this procedure, cell assingment is done by considering the highest enrichment score for that cell. 
+
+```{r}
+new_labels <- colnames(results)[max.col(results)]
+table(AUCell = new_labels, SingleR = predictions$pruned.labels)
+```
+
+::: {.callout-tip}
+## Exercise
+
+Try to use the cellxgene database to gather the markers for each cell type on the table presented previously and run the AUCell analysis again. Check if this yields a better annotation.
+
+:::
+
+```{r}
+par(mfrow=c(3,3))
+AUCell_exploreThresholds(cell_aucs, plotHist=TRUE, assign=TRUE) 
 ```
 

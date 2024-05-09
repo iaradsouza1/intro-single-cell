@@ -1,84 +1,94 @@
 ---
 title: "Clustering and markers identification"
 format: html
+execute: 
+  eval: false
 ---
+
+## Motivation
+
+Here, we summarise the basics to normalize, find the highly variable genes, perform principal component analysis, cluster cells by gene expression, and perform other dimensionality reductions such as UMAP and t-SNE to visualize the clusters.
+
+One critical step in any single-cell analysis consists in identifying the set of highly variable genes. These genes will direct further steps.
+
+## Select one sample: SRR13606306
 
 ```{r}
 library(Seurat)
 library(RedeR)
 library(igraph)
 library(scCustomize)
+library(dplyr)
+library(purrr)
+library(patchwork)
+library(clustree)
 ```
 
-## Motivation
+```{r}
+#| eval: false
 
-This document summarises the basics to normalize, find variable genes, perform principal component analysis, cluster cells by gene expression, and perform other dimensionality reductions such as UMAP and t-SNE. 
+# Install scSHC from github
+devtools::install_github("igrabski/sc-SHC")
+```
 
-One critical step in any single-cell analysis consists in identifying the set of highly variable genes. These genes will direct further steps and therefore, it is essential to pay attention to the results obtained.
-
-# Select one sample: SRR13606301
 
 ```{r}
 load("results/sc_qc.rda")
-sc_qc_SRR13606306 <- subset(sc_qc, orig.ident == "SRR13606306")
+sc_qc_GSM5102900 <- subset(sc_qc, orig.ident == "GSM5102900")
 ```
 
-# Normalize data and find the highly variable genes
+## Normalize data and find the highly variable genes
 
 ```{r}
-sc_qc_SRR13606306 <- NormalizeData(sc_qc_SRR13606306, 
+sc_qc_GSM5102900 <- NormalizeData(sc_qc_GSM5102900, 
                                    assay = "RNA",
                                    normalization.method = "LogNormalize")
-sc_qc_SRR13606306
-sc_qc_SRR13606306 <- FindVariableFeatures(sc_qc_SRR13606306, 
+sc_qc_GSM5102900
+sc_qc_GSM5102900 <- FindVariableFeatures(sc_qc_GSM5102900, 
                                           assay = "RNA", 
                                           selection.method = "vst", 
                                           nfeatures = 2000)
 ```
 
 ```{r}
-VariableFeaturePlot_scCustom(sc_qc_SRR13606306)
+VariableFeaturePlot_scCustom(sc_qc_GSM5102900)
 ```
 
 ```{r}
-hvf_info <- HVFInfo(sc_qc_SRR13606306)
+hvf_info <- HVFInfo(sc_qc_GSM5102900)
 ```
 
-
-# Run PCA
+## Run PCA
 
 ```{r}
-sc_qc_SRR13606306 <- ScaleData(sc_qc_SRR13606306, 
-                               features = VariableFeatures(sc_qc_SRR13606306),
-                               assay = "RNA")
-sc_qc_SRR13606306
-sc_qc_SRR13606306 <- RunPCA(sc_qc_SRR13606306, features = VariableFeatures(sc_qc_SRR13606306))
+sc_qc_GSM5102900 <- ScaleData(sc_qc_GSM5102900,
+                              features = VariableFeatures(sc_qc_GSM5102900),
+                              assay = "RNA")
+sc_qc_GSM5102900
+sc_qc_GSM5102900 <- RunPCA(sc_qc_GSM5102900, features = VariableFeatures(sc_qc_GSM5102900))
 
 # Get the 5 most important genes for PCs 1 to 5
-print(sc_qc_SRR13606306[["pca"]], dims = 1:5, nfeatures = 5)
+print(sc_qc_GSM5102900[["pca"]], dims = 1:5, nfeatures = 5)
 
 # Plot the 30 more important genes to PCs 1 and 2
-VizDimLoadings(sc_qc_SRR13606306, dims = 1:2, reduction = "pca")
+VizDimLoadings(sc_qc_GSM5102900, dims = 1:2, reduction = "pca")
 
 # Heatmap
-DimHeatmap(sc_qc_SRR13606306, reduction = "pca", dims = 1)
+DimHeatmap(sc_qc_GSM5102900, reduction = "pca", dims = 1)
 
-ElbowPlot(sc_qc_SRR13606306)
+ElbowPlot(sc_qc_GSM5102900, ndims = 30)
 ```
 
-# Cluster cells with `FindNeighbors` and `FindClusters`
+## Cluster cells with `FindNeighbors` and `FindClusters`
 
 ```{r}
-sc_qc_SRR13606306 <- FindNeighbors(sc_qc_SRR13606306, reduction = "pca", dims = 1:20)
-sc_qc_SRR13606306 <- FindClusters(sc_qc_SRR13606306, resolution = 0.8)
+sc_qc_GSM5102900 <- FindNeighbors(sc_qc_GSM5102900, reduction = "pca", dims = 1:20)
+sc_qc_GSM5102900 <- FindClusters(sc_qc_GSM5102900, resolution = 0.5)
 ```
 
 ```{r}
 #| eval: false
-library(RedeR)
-library(igraph)
-
-g <- sc_qc_SRR13606306@graphs$RNA_nn %>% igraph::graph_from_adjacency_matrix()
+g <- sc_qc_GSM5102900@graphs$RNA_nn %>% igraph::graph_from_adjacency_matrix()
 
 rdp <- RedPort()
 calld(rdp)
@@ -89,108 +99,283 @@ addGraph(rdp, g)
 
 ## Now, let's pipe all operations
 
-```{r}
-sc_qc_SRR13606306 <- subset(sc_qc, orig.ident == "SRR13606306")
+Let's take advantage of the magrittr (`%>%`) or the R (`|>`) pipe operator and concatenate all functions:
 
-sc_qc_SRR13606306 <- sc_qc_SRR13606306 %>% 
+```{r}
+sc_qc_GSM5102900 <- subset(sc_qc, orig.ident == "GSM5102900")
+
+sc_qc_GSM5102900 <- sc_qc_GSM5102900 %>% 
   NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>% 
   FindVariableFeatures() %>% 
   ScaleData() %>% # By default it takes the HVG
   RunPCA() %>% 
   FindNeighbors(reduction = "pca", dims = 1:20) %>% 
-  FindClusters(resolution = 0.3) %>% 
+  FindClusters(resolution = 0.5) %>% 
   RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>% 
   RunTSNE(dims = 1:20, n.components = 2, seed.use = 123)
 ```
 
-Plot the data embedded on the three dimensionality reductions performed:  
+Plot the data embedded on the three dimensionality reductions performed:
 
 ```{r}
-DimPlot(sc_qc_SRR13606306, reduction = "pca")
-DimPlot(sc_qc_SRR13606306, reduction = "tsne")
-DimPlot(sc_qc_SRR13606306, reduction = "umap")
+DimPlot(sc_qc_GSM5102900, reduction = "pca")
+DimPlot(sc_qc_GSM5102900, reduction = "tsne")
+DimPlot(sc_qc_GSM5102900, reduction = "umap")
 ```
 
 ## Or use the SCTransform function
 
-The `SCTransform` function aims to perform normalization with a variance stabilization transformation approach. This function replaces the  `NormalizeData()`, `ScaleData()`, and `FindVariableFeatures()` functions, and once we run it, it creates the SCT assay slot. By default, the `SCTransform` function select the first 3000 HVG.
+The `SCTransform` function aims to perform normalization with a variance stabilization transformation approach. This function replaces the `NormalizeData()`, `ScaleData()`, and `FindVariableFeatures()` functions, and once we run it, it creates the SCT assay slot. By default, the `SCTransform` function select the first 3000 HVG.
 
 ```{r}
-sc_qc_SRR13606306_sct  <- sc_qc_SRR13606306 %>% 
+sc_qc_GSM5102900_sct  <- sc_qc_GSM5102900 %>% 
   SCTransform() %>% 
   RunPCA() %>% 
   RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>%
   RunTSNE(dims = 1:20, n.components = 2, seed.use = 123) %>%
   FindNeighbors(dims = 1:20) %>% 
-  FindClusters(resolution = 0.3)
+  FindClusters(resolution = 0.5)
 ```
 
 ```{r}
-DimPlot(sc_qc_SRR13606306_sct, reduction = "pca")
-DimPlot(sc_qc_SRR13606306_sct, reduction = "tsne")
-DimPlot(sc_qc_SRR13606306_sct, reduction = "umap")
+DimPlot(sc_qc_GSM5102900_sct, reduction = "pca")
+DimPlot(sc_qc_GSM5102900_sct, reduction = "tsne")
+DimPlot(sc_qc_GSM5102900_sct, reduction = "umap")
 ```
 
 ```{r}
-hvg_1 <- VariableFeatures(sc_qc_SRR13606306, assay = "RNA", nfeatures = 500)
-hvg_2 <- VariableFeatures(sc_qc_SRR13606306_sct, assay = "SCT", nfeatures = 500)
+hvg_1 <- VariableFeatures(sc_qc_GSM5102900, assay = "RNA", nfeatures = 500)
+hvg_2 <- VariableFeatures(sc_qc_GSM5102900_sct, assay = "SCT", nfeatures = 500)
 
 length(intersect(hvg_1, hvg_2))
 ```
 
 ```{r}
-DimPlot(sc_qc_SRR13606306, reduction = "pca") + DimPlot(sc_qc_SRR13606306_sct, reduction = "pca")
-```
-
-Save:
-
-```{r}
-save(sc_qc_SRR13606306, file = "results/sc_qc_SRR13606306_findclusters.rda")
+DimPlot(sc_qc_GSM5102900, reduction = "pca") + DimPlot(sc_qc_GSM5102900_sct, reduction = "pca")
 ```
 
 From now on, we're using the data from the `SCTransform` function.
 
 ## Find gene markers
 
-The `FindMarkers` function compares the expression of a given cluster to all other cells. For example, to find markers for cluster 1, it takes the expression of gene A on cluster 1 and compares to the expression of this gene on cells that are not part of cluster 1. The `FindMarkers` function only considers the HVGs. By default, the function uses the Wilcoxon Rank Sum Test, a non-parametric test to compare the gene expression distributions between the groups of cells. 
+The `FindMarkers` function compares the expression of a given cluster to all other cells. For example, to find markers for cluster 1, it takes the expression of gene A on cluster 1 and compares to the expression of this gene on cells that are not part of cluster 1. The `FindMarkers` function only considers the HVGs. By default, the function uses the Wilcoxon Rank Sum Test, a non-parametric test to compare the gene expression distributions between the groups of cells.
 
 ```{r}
-cluster_markers <- FindAllMarkers(sc_qc_SRR13606306_sct, test.use = "wilcox", min.pct = 0.01)
+seurat_markers <- FindAllMarkers(sc_qc_GSM5102900_sct, test.use = "wilcox", min.pct = 0.1)
 ```
 
 Add differences in percentages, filter only the positive differences:
 
 ```{r}
-cluster_markers <- cluster_markers %>% 
-  mutate(diff_pct = pct.1 - pct.2) %>% 
-  arrange(desc(diff_pct)) %>% 
-  filter(diff_pct > 0)
+seurat_markers <- seurat_markers %>% 
+  dplyr::mutate(diff_pct = pct.1 - pct.2) %>% 
+  dplyr::arrange(desc(diff_pct)) %>% 
+  dplyr::filter(diff_pct > 0)
+```
+
+Get the first 10 markers for each cluster, ordered by differences in percentage:
+
+```{r}
+seurat_markers %>% 
+  dplyr::group_by(cluster) %>% 
+  dplyr::slice_max(n = 10, order_by = diff_pct) -> candidates_seurat
+```
+
+Create the functions to plot the feature plot and the violin plot:
+
+```{r}
+# Function to create a list of feature plots for each cluster
+create_feature_plots <- function(df_candidates, sc, cluster_column = "cluster") {
+  # Create the feature plots for all clusters
+  lapply(unique(df_candidates[[cluster_column]]), function(x) {
+    FeaturePlot_scCustom(
+      sc, 
+      features = df_candidates[["gene"]][df_candidates[[cluster_column]] == x]
+      ) +
+    DimPlot(sc, reduction = "umap") +
+    plot_annotation(title = paste0("Cluster: ", x))
+  }) -> ls_feature_plots
+  names(ls_feature_plots) <- paste0("cluster", 
+                                    unique(df_candidates[[cluster_column]]))
+  return(ls_feature_plots)
+}
+
+# Function to create a list of feature plots for each cluster
+create_vln_plots <- function(df_candidates, sc, cluster_column = "cluster") {
+  # Create the feature plots for all clusters
+  lapply(unique(df_candidates[[cluster_column]]), function(x) {
+    VlnPlot_scCustom(
+      sc, 
+      features = df_candidates[["gene"]][df_candidates[[cluster_column]] == x]
+      ) +
+    DimPlot(sc, reduction = "umap") +
+    plot_annotation(title = paste0("Cluster: ", x))
+  }) -> ls_vln_plots
+  names(ls_vln_plots) <- paste0("cluster", unique(df_candidates[[cluster_column]]))
+  return(ls_vln_plots)
+}
+
+```
+
+Create the violin plots:
+
+```{r}
+ls_vln_seurat <- create_vln_plots(candidates_seurat, sc_qc_GSM5102900_sct)
+ls_fp_seurat <- create_feature_plots(candidates_seurat, sc_qc_GSM5102900_sct)
+```
+
+## Marker gene selection - the Bioconductor way
+
+The p-values obtained with the Wilcoxon test (or any other statistical test) when comparing the expression of a given gene in different cell populations suffer from the "double dipping" problem: we are using a pre-clustered data to check which are the differences among the clusters (check [this](https://www.broadinstitute.org/talks/data-thinning-avoid-double-dipping) amazing talk). In machine learning words, we are using the same data to fit and validate our model. As a consequence, we'll get genes with very low p-values and, therefore, those p-values hardly have inference power.
+
+A better approach to select gene markers is relying in multiple metrics. The `scoreMarkers` function from the `scran` R/Bioconductor package will perform a pairwise comparison of cluster markers. It returns a list of dataframes with multiple metrics. The `scoreMarkers` function does not care about the pvalues for comparisons, instead it considers the effect sizes between cells of different clusters. However, If you really care about the p-values (🤷‍♀️), check the `findMarkers` function, also from `scran`.
+
+```{r}
+library(scran)
+library(scater)
 ```
 
 ```{r}
-cluster_markers %>% 
-  group_by(cluster) %>% 
-  slice_max(n = 10, order_by = diff_pct) -> candidates
+# Load data
+load("results/sc_qc_GSM5102900_SCT_clusters.rda")
+
+# Transform Seurat into SCE
+sce <- as.SingleCellExperiment(sc_qc_GSM5102900_sct)
+
+# Set colLabels as the clusters found with the SCTransform method
+colLabels(sce) <- colData(sce)$RNA_snn_res.0.5
+
+# Get markers
+bioc_markers <- scran::scoreMarkers(sce, colLabels(sce))
+bioc_markers
 ```
 
-Feature plots: 
+Concatenate all dataframes into one:
 
 ```{r}
-lapply(unique(candidates$cluster), function(x) {
-  FeaturePlot_scCustom(sc_qc_SRR13606306_sct, 
-                       features = candidates$gene[candidates$cluster == x]) +
-  DimPlot(sc_qc_SRR13606306_sct, reduction = "umap")
-}) -> ls_feature_plots
-names(ls_feature_plots) <- paste0("cluster", unique(candidates$cluster))
+map_dfr(names(bioc_markers), function(x) {
+  tmp <- as.data.frame(bioc_markers[[x]])
+  tmp$cluster <- x
+  tmp$gene <- rownames(tmp)
+  rownames(tmp) <- NULL
+  return(tmp)
+}) -> bioc_markers
+
+colnames(bioc_markers)
 ```
 
-Violin plots: 
+As an example, consider that we want to find markers for cluster 0. All "self" columns refer to metrics from cluster 0 and all "other" columns refer to metrics from all other cells (except the cluster 0 cells).
+
+-   `self.average`: mean log-expression in cluster 0
+
+-   `other.average`: mean log-expression in all other cells;
+
+-   `self.detected`: the proportion of cells with detected expression (non-zero) in cluster 0;
+
+-   `other.detected`: the proportion of cells with detected expression (non-zero) in all other cells;
+
+-   `*.logFC.cohen`: The Cohen d is a normalized metric to compare different logFCs. It is the difference in the mean log-expression for each group scaled by the average standard deviation across the two groups.
+
+-   `*.AUC`: The AUC quantifies our ability to distinguish each gene expression distribution in a pairwise comparison. In other words, it refers of how well the expression of gene X separates the cluster of interest (cluster 0, in our example) and all other cells. The AUC is the probability that the expression of gene X in a randomly chosen cell from cluster 0 is greater than a randomly chosen cell from all other cells. A value of 1 for gene X says that all expression values for gene X are greater in cluster 0 than all other cells, meaning that this gene is upregulated specifically in cluster 0. A value of 0.5 means that the probability of having a greater expression of gene X in cluster 0 is the same if we consider all other cells. And a value of 0 means that the probability of having a greater expression of gene X in cluster 0 than all other cells is 0, meaning that this gene is downregulated. **TL,DR: genes with the greatest `mean.AUC` or `median.AUC` values are candidates for markers.**
 
 ```{r}
-lapply(unique(candidates$cluster), function(x) {
-  VlnPlot_scCustom(sc_qc_SRR13606306_sct, 
-                   features = candidates$gene[candidates$cluster == x])
-}) -> ls_vln_plots
-names(ls_vln_plots) <- paste0("cluster", unique(candidates$cluster))
+# Select the top 10 genes based on the proportion of cells expressing the gene and the mean.AUC
+bioc_markers %>% 
+  dplyr::mutate(diff.detected = self.detected - other.detected) %>% 
+  dplyr::group_by(cluster) %>% 
+  # Rank values first by their differences in proportion and then by AUC
+  dplyr::arrange(desc(diff.detected), desc(mean.AUC)) %>%
+  dplyr::slice(1:10) %>% 
+  dplyr::select(gene, cluster, mean.AUC, diff.detected) -> candidates_bioc
+```
+
+Create the feature and violin plots:
+
+```{r}
+ls_vln_bioc <- create_vln_plots(candidates_bioc, sc_qc_GSM5102900_sct)
+ls_fp_bioc <- create_feature_plots(candidates_bioc, sc_qc_GSM5102900_sct)
+```
+
+Select the markers that appear in both approaches:
+
+```{r}
+# List of markers for each approach
+ls_markers_seurat <- split(candidates_seurat$gene, candidates_seurat$cluster) 
+ls_markers_bioc <- split(candidates_bioc$gene, candidates_bioc$cluster) 
+
+# Intersect markers
+ls_common_markers <- map(candidates_bioc$cluster, ~ intersect(ls_markers_bioc[[.x]], ls_markers_seurat[[.x]]))
+names(ls_common_markers) <- paste0("cluster", candidates_bioc$cluster)
+```
+
+Violin plot for common markers:
+
+```{r}
+candidates_common <- candidates_bioc %>% 
+  filter(gene %in% unlist(ls_common_markers))
+
+ls_vln_common <- create_vln_plots(candidates_common, sc_qc_GSM5102900_sct)
+```
+
+Save
+
+```{r}
+save(bioc_markers, seurat_markers, candidates_common, 
+     file = "results/candidates.rda")
+```
+
+## Check the cluster stability
+
+Perform clustering analysis with different resolution parameters:
+
+```{r}
+#| message: false
+sc_qc_GSM5102900_sct  <- sc_qc_GSM5102900 %>% 
+  SCTransform() %>% 
+  RunPCA() %>% 
+  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>%
+  RunTSNE(dims = 1:20, n.components = 2, seed.use = 123) %>%
+  FindNeighbors(dims = 1:20) %>% 
+  FindClusters(resolution = seq(0, 1, 0.1))
+```
+
+```{r}
+clustree(sc_qc_GSM5102900_sct, prefix = "SCT_snn_res.", node_colour = "sc3_stability")
+```
+
+What if we could estimate the minimal number of clusters? Check this [paper](https://www.nature.com/articles/s41592-023-01933-9):
+
+```{r}
+library(scSHC)
+# Get count table
+mt <- GetAssayData(sc_qc_GSM5102900_sct, assay = "RNA", layer = "counts")
+
+# Run hierarchical clustering (alpha = 0.05)
+clusters <- scSHC(mt, alpha = 0.05)
+
+# Create a new column for the estimated clusters
+sc_qc_GSM5102900_sct@meta.data$scshc_clusters <- as.factor(clusters[[1]])
+
+# Plot the UMAP
+DimPlot(sc_qc_GSM5102900_sct, reduction = "umap", group.by = "scshc_clusters")
+```
+
+We can also compare the clustering we performed with Seurat (resolution = 0.5). The `testClusters` function will test if the Seurat clustering are statistically significant and return the labels a
+
+```{r}
+# Find the optimal number of clusters given the result from Seurat
+final_labels <- testClusters(mt, cluster_ids = as.character(sc_qc_GSM5102900_sct@meta.data$SCT_snn_res.0.3), 
+                             alpha = 0.05)
+
+# Create
+sc_qc_GSM5102900_sct@meta.data$Res0.5_corrected_clusters <- as.character(gsub("new", "", final_labels[[1]]))
+DimPlot(sc_qc_GSM5102900_sct, reduction = "umap", group.by = "SCT_snn_res.0.5") + DimPlot(sc_qc_GSM5102900_sct, reduction = "umap", group.by = "Res0.5_corrected_clusters")
+```
+
+Save:
+
+```{r}
+save(sc_qc_GSM5102900_sct, file = "results/sc_qc_GSM5102900_SCT_clusters.rda")
+save(sc_qc_GSM5102900, file = "results/sc_qc_GSM5102900_clusters.rda")
 ```
 
