@@ -9,9 +9,12 @@ dependencies:
   - r-vroom
   - r-devtools
   - r-harmony
+  - r-clustree
+  - r-sccustomize
   - bioconductor-singlecellexperiment
   - bioconductor-scdblfinder
   - bioconductor-singler
   - bioconductor-aucell
   - bioconductor-celldex
+  - bioconductor-reder
   - openssl=3.1.3
