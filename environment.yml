@@ -2,15 +2,17 @@ name: intro-single-cell
 channels:
   - conda-forge
   - bioconda
+  - genomedk
   - defaults
 dependencies:
-  - r-seurat
+  - r-seurat=5
   - r-tidyverse
   - r-vroom
   - r-devtools
   - r-harmony
   - r-clustree
   - r-sccustomize
+  - r-rmarkdown
   - bioconductor-singlecellexperiment
   - bioconductor-scdblfinder
   - bioconductor-singler

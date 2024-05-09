@@ -3,15 +3,13 @@ title: "Data integration"
 format: html
 ---
 
-# Motivation
+## Motivation
 
-The integration process means to remove unwanted differences between samples, so we can compare the cell types. 
+In single-cell RNA-seq analysis, the integration analysis refers to combine data from multiple samples or experiments to create an unified dataset. This integrated dataset can then be used for cell type annotation, where computational methods are applied to assign cell types to individual cells based on their gene expression patterns, just like we did before for a unique sample. By integrating data from multiple samples, we increase the diversity and the number of cells in out dataset, which can improve the accuracy and resolution of cell type annotation (and other analyses).
 
-The most important assumption:
+The integration process aims to remove unwanted differences between samples, so we can compare their cell types. However, common single-cell integration methods are not optimal, meaning that when they try to correct batch effects among the samples, they may also inadvertently remove biological variability (which is the kind of variability we actually care about). Another important limitation of integration methods is the assumption of similar cell type content across different samples. If you have samples with very different expected cell type content (e.g., a sample from liver and another one from brain cortex), there's no sense on integrating them. 
 
-- If we are integrating different samples, we are assuming they have the same cell's content (e.g. the cell type A is present at the same proportion in samples X an Y).
-
-# Possible ways of performing integration
+## Possible ways of performing integration
 
 https://www.nature.com/articles/s41467-023-37126-3
 https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
