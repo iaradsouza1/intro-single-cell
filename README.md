@@ -7,6 +7,7 @@ This book is based on the following references:
 - [Orchestrating Single-Cell Analysis with Bioconductor - Basics](https://bioconductor.org/books/3.13/OSCA.basic/);
 - [Single-cell best practices](https://www.sc-best-practices.org/preamble.html)
 - [Seurat cheatsheet](https://satijalab.org/seurat/articles/essential_commands.html)
+- [Introduction to single-cell from Wellcome Connecting Science](https://github.com/WCSCourses/SingleCell_23)
 - [SingleR](https://bioconductor.org/books/release/SingleRBook/)
 
 # Install R packages using conda or mamba
