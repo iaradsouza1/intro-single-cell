@@ -5,7 +5,8 @@ channels:
   - genomedk
   - defaults
 dependencies:
-  - r-seurat=5
+  - r-seurat=5.0.3
+  - r-matrix=1.6_1.1
   - r-tidyverse
   - r-vroom
   - r-devtools
@@ -13,10 +14,12 @@ dependencies:
   - r-clustree
   - r-sccustomize
   - r-rmarkdown
+  - r-metap
   - bioconductor-singlecellexperiment
   - bioconductor-scdblfinder
   - bioconductor-singler
   - bioconductor-aucell
   - bioconductor-celldex
   - bioconductor-reder
+  - bioconductor-multtest
   - openssl=3.1.3

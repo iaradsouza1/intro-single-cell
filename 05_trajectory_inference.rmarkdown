@@ -1,0 +1,65 @@
+---
+title: "Trajectory inference with slingshot"
+---
+
+```{r}
+library(SingleCellExperiment)
+library(slingshot)
+library(Seurat)
+library(scales)
+library(tidyverse)
+
+# To transpose sparse matrix for dyno analysis
+library(Matrix)
+```
+
+
+# Trajectory inference analysis with Slingshot
+
+
+```{r}
+load("results/CCAIntegrationseurat_object.rda")
+
+# Color scale
+clusters <- factor(tmp$seurat_clusters, levels = sort(unique(tmp$seurat_clusters)))
+hex <- hue_pal()(n_distinct(clusters))
+cols_bygroup <- hex[as.integer(clusters)]
+names(cols_bygroup) <- clusters
+
+# Run Slingshot main function
+make_slingshot <- function(seurat, group, dim, ...) {
+  # Transform Seurat to SingleCellExperiment
+  sce <- as.SingleCellExperiment(seurat)
+  
+  # Run slingshot
+  sce <- slingshot(sce, clusterLabels = group, reducedDim = dim, ...)
+  sce
+}
+
+# Plot trajectories
+plot_trajectories <- function(sce, dim, cols_bygroup, ...) {
+  plot(reducedDim(sce, type = dim), col = cols_bygroup, pch = 16, cex = 0.6, ...)
+  lines(SlingshotDataSet(sce), lwd = 2, col = "black")
+  legend("topleft", legend = unique(names(cols_bygroup)), col = unique(cols_bygroup), pch = 16)
+}
+
+# Plot MST
+plot_MST <- function(sce, dim, cols_bygroup, ...) {
+  plot(reducedDim(sce, type = dim), col = cols_bygroup, pch = 16, cex = 0.5, ...)
+  lines(SlingshotDataSet(sce), lwd = 2, type = 'lineages', col = 'black')
+  legend("topleft", legend = unique(names(cols_bygroup)), col = unique(cols_bygroup), pch = 16)
+}
+```
+
+
+## Make trajectory analysis (based on the CCA integration)
+
+
+```{r}
+sce_cca <- make_slingshot(tmp, group = "seurat_clusters", dim = "UMAP", start.clus = c("2", "6"))
+
+plot_trajectories(sce_cca, dim = "UMAP", cols_bygroup = cols_bygroup, asp = 1)
+
+plot_MST(sce_cca, "UMAP", cols_bygroup = cols_bygroup)
+```
+

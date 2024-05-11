@@ -9,10 +9,157 @@ In single-cell RNA-seq analysis, the integration analysis refers to combine data
 
 The integration process aims to remove unwanted differences between samples, so we can compare their cell types. However, common single-cell integration methods are not optimal, meaning that when they try to correct batch effects among the samples, they may also inadvertently remove biological variability (which is the kind of variability we actually care about). Another important limitation of integration methods is the assumption of similar cell type content across different samples. If you have samples with very different expected cell type content (e.g., a sample from liver and another one from brain cortex), there's no sense on integrating them. 
 
-## Possible ways of performing integration
+Before integrating datasets, one needs to evaluate if there's actually a necessity to do that, since the integration process will impact the data. Also, there's no simple rule about how to integrate datasets, this decision will depend on the experimental design used and the biological questions associated with the analysis.  
 
-https://www.nature.com/articles/s41467-023-37126-3
-https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
+## Integrating data with Seurat
 
+```{r}
+library(Seurat)
+library(patchwork)
+library(SingleR)
+library(SingleCellExperiment)
+```
 
-# 
+We're loading the whole dataset (four samples: two samples from healthy individuals and two from individuals who died from sepsis). 
+```{r}
+load("results/sc_qc_split.rda")
+```
+
+Now let's do a standard analysis... 
+
+```{r}
+sc_qc_split_unintegrated <- sc_qc_split %>% 
+  NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>% # By default it takes the HVG
+  RunPCA() %>% 
+  FindNeighbors(reduction = "pca", dims = 1:20) %>% 
+  FindClusters(resolution = 0.5) %>% 
+  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123) %>% 
+  RunTSNE(dims = 1:20, n.components = 2, seed.use = 123)
+```
+
+For the Seurat object split into layers, the steps run previously (normalization, find variable features, scaling, etc.) are performed in each layer separatedly, but a consensus of HVG is automatically defined. 
+
+```{r}
+DimPlot(sc_qc_split_unintegrated, reduction = "umap", group.by = c("group", "seurat_clusters", "orig.ident"))
+```
+
+Let's visualize the number of cells by clusters and groups:
+
+```{r}
+table(sc_qc_split_unintegrated$seurat_clusters, sc_qc_split_unintegrated$group)
+```
+
+Clearly, the number of cells in each cluster/group is unbalanced. This dataset needs to be integrated. 
+
+## Integrate using all methods made available by Seurat
+
+The integration procedure returns a dimensional reduction that captures the shared sources of variance (it does not return the matrix of gene expression corrected by batch). This reduction is used to clustering analysis. 
+
+```{r}
+# Use all possible integration methods made available by Seurat v5
+
+# CCA (Seurat's default)
+sc_qc_integrated_cca <- IntegrateLayers(
+  object = sc_qc_split_unintegrated, method = CCAIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.cca",
+  verbose = FALSE
+) %>% 
+  FindNeighbors(reduction = "integrated.cca", dims = 1:30, reduction.name = "umap.cca") %>% 
+  FindClusters(resolution  = 0.3) %>% 
+  RunUMAP(reduction = "integrated.cca", dims = 1:30)
+
+# Harmony
+sc_qc_integrated_harmony <- IntegrateLayers(
+  object = sc_qc_split_unintegrated, method = HarmonyIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.harmony",
+  verbose = FALSE
+) %>% 
+  FindNeighbors(reduction = "integrated.harmony", dims = 1:30, reduction.name = "umap.harmony") %>% 
+  FindClusters(resolution  = 0.3) %>% 
+  RunUMAP(reduction = "integrated.harmony", dims = 1:30)
+  
+# RPCA
+sc_qc_integrated_rpca <- IntegrateLayers(
+  object = obj, method = RPCAIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.rpca",
+  verbose = FALSE
+) %>% 
+  FindNeighbors(reduction = "integrated.rpca", dims = 1:30, reduction.name = "umap.rpca") %>% 
+  FindClusters(resolution  = 0.3) %>% 
+  RunUMAP(reduction = "integrated.rpca", dims = 1:30)
+
+# Joint PCA
+sc_qc_integrated_jointpca <- IntegrateLayers(
+  object = obj, method = JointPCAIntegration,
+  orig.reduction = "pca", new.reduction = "integrated.jointpca",
+  verbose = FALSE
+) %>% 
+  FindNeighbors(reduction = "integrated.jointpca", dims = 1:30, reduction.name = "umap.jointpca") %>% 
+  FindClusters(resolution  = 0.3) %>% 
+  RunUMAP(reduction = "integrated.jointpca", dims = 1:30)
+```
+
+Let's check the results from CCA and Harmony methods:
+
+```{r}
+p1 <- DimPlot(sc_qc_integrated_cca, group.by = c("orig.ident", "group"), reduction = "integrated.cca")
+p2 <- DimPlot(sc_qc_integrated_harmony, group.by = c("orig.ident", "group"), reduction = "integrated.harmony")
+p3 <- DimPlot(sc_qc_integrated_rpca, group.by = c("orig.ident", "group"), reduction = "integrated.rpca")
+p4 <- DimPlot(sc_qc_integrated_jointpca, group.by = c("orig.ident", "group"), reduction = "integrated.jointpca")
+```
+
+```{r}
+p1 / p2
+```
+
+```{r}
+p3 / p4
+```
+
+Calculate mixing metrics (the lower the better):
+
+```{r}
+median(MixingMetric(sc_qc_integrated_cca, grouping.var = "orig.ident"))
+median(MixingMetric(sc_qc_integrated_rpca, grouping.var = "orig.ident"))
+median(MixingMetric(sc_qc_integrated_harmony, grouping.var = "orig.ident"))
+median(MixingMetric(sc_qc_integrated_jointpca, grouping.var = "orig.ident"))
+```
+
+By Seurat's mixing metric, we can choose any of the results. For our next steps, we're choosing the CCA integration. 
+
+```{r}
+sc_qc_integrated_cca[["RNA"]] <- JoinLayers(sc_qc_integrated_cca[["RNA"]])
+DimPlot(sc_qc_integrated_cca, group.by = c("orig.ident", "group"), reduction = "integrated.cca")
+DimPlot(sc_qc_integrated_cca, group.by = c("seurat_clusters", "group"), reduction = "umap")
+```
+
+Disclaimer: there's other ways of evaluating if our dataset was well integrated. As all steps in single-cell analysis, the integration analysis is iterative and can be redone if further steps indicate so. We can have better information if we annotate the integrated dataset and check if the cell labels inferred make sense. You can also try the approach detailed on [this](https://www.pnas.org/doi/10.1073/pnas.2313719121) paper, which implements a statistical test to evaluate the alignability of different datasets.
+
+## Find conserved markers
+
+Next, assuming the similar cell type content across samples, we can select the markers conserved across the conditions of interest. This means that genes are markers for that cell type irrespective of the cell condition or experimental group. 
+
+```{r}
+# Find conserved markers for each cluster
+map_dfr(unique(sc_qc_integrated_cca@meta.data$RNA_snn_res.0.3), function(x) {
+  
+  df <- FindConservedMarkers(sc_qc_integrated_cca, grouping.var = "group", ident.1 = x)
+  
+  if(nrow(df) > 0) {
+    df$genes <- rownames(df)
+    df$cluster <- x
+    rownames(df) <- NULL
+    return(df)
+  }
+  
+}) -> conserved_markers
+
+# Filter markers by proportion
+conserved_markers %>% 
+  mutate(diff_sepsis = non_survival_sepsis_pc.1 - non_survival_sepsis_pc.2,
+         diff_healthy = healthy_pct.1 - healthy_pct.2) %>% 
+  filter(diff_sepsis > 0.5, diff_healthy > 0.5) -> conserved_markers_filtered
+```
+

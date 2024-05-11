@@ -19,6 +19,7 @@ There are some essential things to check on your data before doing more robust a
 
 ```{r}
 library(Seurat)
+library(Matrix)
 library(SingleCellExperiment)
 library(scDblFinder)
 library(tidyverse)
@@ -26,7 +27,7 @@ library(tidyverse)
 
 ```{r}
 samples <- c("GSM5102900", "GSM5102901", "GSM5102902", "GSM5102903")
-group <- c("healthy", "healthy", "non-survival-sepsis", "non-survival-sepsis")
+group <- c("healthy", "healthy", "non_survival_sepsis", "non_survival_sepsis")
 
 # Matrices directories
 dir <- paste0("data/sepsis/", samples)
@@ -67,7 +68,7 @@ sce <- as.SingleCellExperiment(sc)
 
 # Remove doublets using the scDblFinder
 set.seed(123)
-results <- scDblFinder(sce, returnType = 'table') %>%
+results <- scDblFinder(sce, returnType = 'table') %>% 
   as.data.frame() %>%
   dplyr::filter(type == "real")
 
@@ -167,7 +168,7 @@ save(sc_qc, file = "results/sc_qc.rda")
 ### Split the layers (for integration step)
 
 ```{r}
-sc_qc_split <- split(sc_qc[["RNA"]], f = sc_qc$orig.ident)
+sc_qc_split <- split(sc_qc, f = sc_qc$orig.ident)
 save(sc_qc_split, file = "results/sc_qc_split.rda")
 ```
 
