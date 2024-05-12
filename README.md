@@ -9,6 +9,7 @@ This book is based on the following references:
 - [Seurat cheatsheet](https://satijalab.org/seurat/articles/essential_commands.html)
 - [Introduction to single-cell from Wellcome Connecting Science](https://github.com/WCSCourses/SingleCell_23)
 - [SingleR](https://bioconductor.org/books/release/SingleRBook/)
+- This awesome playlist on YouTube (in python): [link](https://www.youtube.com/watch?v=cmOlCTGX4Ik&list=PLi1VnGoeDGjuZmB8zJNqpuhGe6Zj7HNYQ)
 
 # Install R packages using conda or mamba
 
