@@ -16,10 +16,13 @@ dependencies:
   - r-rmarkdown
   - r-metap
   - bioconductor-singlecellexperiment
+  - bioconductor-biomart
   - bioconductor-scdblfinder
   - bioconductor-singler
   - bioconductor-aucell
   - bioconductor-celldex
   - bioconductor-reder
   - bioconductor-multtest
+  - bioconductor-glmgampoi
   - openssl=3.1.3
+  - git

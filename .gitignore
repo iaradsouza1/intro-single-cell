@@ -4,7 +4,9 @@
 .Ruserdata
 *_cache/
 *_files/
+*.html
 /.quarto/
+/site_libs/
 /data/
 /results/
 _book/*
