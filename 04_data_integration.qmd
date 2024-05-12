@@ -15,6 +15,8 @@ Before integrating datasets, one needs to evaluate if there's actually a necessi
 
 ```{r}
 library(Seurat)
+library(tidyverse)
+library(biomaRt)
 library(patchwork)
 library(SingleR)
 library(SingleCellExperiment)
@@ -25,13 +27,13 @@ We're loading the whole dataset (four samples: two samples from healthy individu
 load("results/sc_qc_split.rda")
 ```
 
-Now let's do a standard analysis... 
+Now let's do the standard analysis... 
 
 ```{r}
 sc_qc_split_unintegrated <- sc_qc_split %>% 
   NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>% 
   FindVariableFeatures() %>% 
-  ScaleData() %>% # By default it takes the HVG
+  ScaleData() %>%
   RunPCA() %>% 
   FindNeighbors(reduction = "pca", dims = 1:20) %>% 
   FindClusters(resolution = 0.5) %>% 
@@ -59,6 +61,7 @@ The integration procedure returns a dimensional reduction that captures the shar
 
 ```{r}
 # Use all possible integration methods made available by Seurat v5
+options(future.globals.maxSize = 1000 * 1024^2)
 
 # CCA (Seurat's default)
 sc_qc_integrated_cca <- IntegrateLayers(
@@ -67,7 +70,7 @@ sc_qc_integrated_cca <- IntegrateLayers(
   verbose = FALSE
 ) %>% 
   FindNeighbors(reduction = "integrated.cca", dims = 1:30, reduction.name = "umap.cca") %>% 
-  FindClusters(resolution  = 0.3) %>% 
+  FindClusters(resolution  = 0.3) %>%
   RunUMAP(reduction = "integrated.cca", dims = 1:30)
 
 # Harmony
@@ -82,7 +85,7 @@ sc_qc_integrated_harmony <- IntegrateLayers(
   
 # RPCA
 sc_qc_integrated_rpca <- IntegrateLayers(
-  object = obj, method = RPCAIntegration,
+  object = sc_qc_split_unintegrated, method = RPCAIntegration,
   orig.reduction = "pca", new.reduction = "integrated.rpca",
   verbose = FALSE
 ) %>% 
@@ -92,7 +95,7 @@ sc_qc_integrated_rpca <- IntegrateLayers(
 
 # Joint PCA
 sc_qc_integrated_jointpca <- IntegrateLayers(
-  object = obj, method = JointPCAIntegration,
+  object = sc_qc_split_unintegrated, method = JointPCAIntegration,
   orig.reduction = "pca", new.reduction = "integrated.jointpca",
   verbose = FALSE
 ) %>% 
@@ -104,10 +107,10 @@ sc_qc_integrated_jointpca <- IntegrateLayers(
 Let's check the results from CCA and Harmony methods:
 
 ```{r}
-p1 <- DimPlot(sc_qc_integrated_cca, group.by = c("orig.ident", "group"), reduction = "integrated.cca")
-p2 <- DimPlot(sc_qc_integrated_harmony, group.by = c("orig.ident", "group"), reduction = "integrated.harmony")
-p3 <- DimPlot(sc_qc_integrated_rpca, group.by = c("orig.ident", "group"), reduction = "integrated.rpca")
-p4 <- DimPlot(sc_qc_integrated_jointpca, group.by = c("orig.ident", "group"), reduction = "integrated.jointpca")
+p1 <- DimPlot(sc_qc_integrated_cca, group.by = c("orig.ident", "group"), reduction = "integrated.cca") + ggtitle("CCA")
+p2 <- DimPlot(sc_qc_integrated_harmony, group.by = c("orig.ident", "group"), reduction = "integrated.harmony") + ggtitle("Harmony")
+p3 <- DimPlot(sc_qc_integrated_rpca, group.by = c("orig.ident", "group"), reduction = "integrated.rpca") + ggtitle("RPCA")
+p4 <- DimPlot(sc_qc_integrated_jointpca, group.by = c("orig.ident", "group"), reduction = "integrated.jointpca") + ggtitle("Joint PCA")
 ```
 
 ```{r}
@@ -137,6 +140,10 @@ DimPlot(sc_qc_integrated_cca, group.by = c("seurat_clusters", "group"), reductio
 
 Disclaimer: there's other ways of evaluating if our dataset was well integrated. As all steps in single-cell analysis, the integration analysis is iterative and can be redone if further steps indicate so. We can have better information if we annotate the integrated dataset and check if the cell labels inferred make sense. You can also try the approach detailed on [this](https://www.pnas.org/doi/10.1073/pnas.2313719121) paper, which implements a statistical test to evaluate the alignability of different datasets.
 
+```{r}
+save(sc_qc_integrated_cca, file = "results/integrated_cca.rda")
+```
+
 ## Find conserved markers
 
 Next, assuming the similar cell type content across samples, we can select the markers conserved across the conditions of interest. This means that genes are markers for that cell type irrespective of the cell condition or experimental group. 
@@ -161,5 +168,105 @@ conserved_markers %>%
   mutate(diff_sepsis = non_survival_sepsis_pc.1 - non_survival_sepsis_pc.2,
          diff_healthy = healthy_pct.1 - healthy_pct.2) %>% 
   filter(diff_sepsis > 0.5, diff_healthy > 0.5) -> conserved_markers_filtered
+
+conserved_markers_filtered %>% 
+  head()
+```
+
+## Annotate cells with `TransferData`
+
+Different from the integration, with the transfer data approach, we do not modify the query data. The transfer data approach is similar to annotate cells with a reference-based approach. To do that, we need a reference single-cell dataset (you can download the reference atlas [here](https://datasets.cellxgene.cziscience.com/9074bc5a-a303-48ea-afb3-d429ac5b9dbe.rds)). 
+
+```{r}
+ref <- readRDS("data/blood_tabula_sapiens/blood_atlas.rds")
+DimPlot(ref, group.by = "cell_type", reduction = "umap")
+```
+
+The reference data genes are in ensembl gene id. Create a new Seurat object with HGNC symbol genes to match our query.
+
+```{r}
+ensembl <- useMart("ensembl")
+ensembl <- useDataset("hsapiens_gene_ensembl", ensembl)
+ids <- getBM(attributes = c("ensembl_gene_id", "hgnc_symbol", "chromosome_name"), 
+             filters = "ensembl_gene_id",
+             values = rownames(ref),
+             mart = ensembl)
+genes_query <- rownames(sc_qc_integrated_cca)
+ids <- ids %>% 
+  filter(chromosome_name %in% c(1:22, "X", "Y"),
+         hgnc_symbol %in% genes_query)
+duplicated_genes <- ids %>% 
+  dplyr::count(hgnc_symbol) %>%
+  arrange(desc(n)) %>%
+  filter(n == 2) %>% 
+  pull(hgnc_symbol)
+
+# There are five genes with 2 ensembl gene ids for each symbol. For technical reasons we're excluding the duplicated genes. However, they need to be included on the count table. The best way is selecting the ensembl id of greatest variability.
+duplicated_genes <- ids %>% 
+  filter(hgnc_symbol %in% duplicated_genes) %>% 
+  pull(ensembl_gene_id)
+
+counts <- LayerData(ref, layer = "counts")
+counts <- counts[-which(rownames(counts) %in% duplicated_genes),]
+counts <- counts[which(rownames(counts) %in% ids$ensembl_gene_id),]
+
+rownames(counts) <- ids$hgnc_symbol[match(rownames(counts), ids$ensembl_gene_id)]
+
+blood_ref <- CreateSeuratObject(counts = counts, meta.data = ref@meta.data)
+rm(ref)
+
+blood_ref <- blood_ref %>% 
+  NormalizeData() %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>% 
+  RunPCA %>% 
+  RunUMAP(reduction = "pca", dims = 1:30)
+
+DimPlot(blood_ref, group.by = c("assay", "donor_id"), reduction = "umap")
+```
+
+Select only the cells gathered from 10x 3'v3 assay:
+
+```{r}
+table(blood_ref@meta.data$assay)
+blood_ref <- subset(blood_ref, assay == "10x 3' v3")
+dim(blood_ref)
+```
+
+Integrate the reference considegring the donors as batches:
+
+```{r}
+blood_ref[["RNA"]] <- split(blood_ref[["RNA"]], f = blood_ref$donor_id)
+blood_ref <- blood_ref %>% 
+  NormalizeData(normalization.method = "LogNormalize", scale.factor = 10000) %>% 
+  FindVariableFeatures() %>% 
+  ScaleData() %>%
+  RunPCA() %>% 
+  FindNeighbors(reduction = "pca", dims = 1:30) %>% 
+  FindClusters() %>% 
+  RunUMAP(dims = 1:20, n.components = 2, seed.use = 123)
+
+DimPlot(blood_ref, group.by = c("assay", "donor_id"), reduction = "pca")
+```
+
+
+```{r}
+blood_ref <- IntegrateLayers(object = blood_ref, method = CCAIntegration, orig.reduction = "pca",
+                             new.reduction = "integrated.cca", verbose = FALSE) %>%
+  FindNeighbors(reduction = "integrated.cca", dims = 1:30) %>% 
+  FindClusters()
+DimPlot(blood_ref, group.by = c("assay", "donor_id"), reduction = "integrated.cca")
+```
+
+Use TransferData()` to predict labels on our query dataset:
+
+```{r}
+# select two technologies for the query datasets
+query <- JoinLayers(sc_qc_split_unintegrated)
+anchors <- FindTransferAnchors(reference = blood_ref, query = query, dims = 1:30,
+                               reference.reduction = "pca")
+predictions <- TransferData(anchorset = anchors, refdata = blood_ref$cell_type, dims = 1:30)
+query <- AddMetaData(query, metadata = predictions)
+DimPlot(query, group.by = "predicted.id", label = T)
 ```
 
