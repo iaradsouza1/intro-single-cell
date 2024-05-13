@@ -24,4 +24,8 @@ Activate the `intro-single-cell` environment:
 conda activate intro-single-cell
 ```
 
+# Download the data
+
+ In your machine, download [**this**](https://drive.google.com/drive/folders/1RlR_e4JDAPAh3w7028u5Y1CooGaGZMfI?usp=drive_link) folder and extract it to the same location of the course folder.
+
 
