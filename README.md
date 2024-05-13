@@ -29,4 +29,6 @@ conda activate intro-single-cell
 
  In your machine, download [**this**](https://drive.google.com/drive/folders/1RlR_e4JDAPAh3w7028u5Y1CooGaGZMfI?usp=drive_link) folder and extract it to the same location of the course folder.
 
+# Datasets to practice
 
+List of datasets to practice: [*link*](https://gist.github.com/jvfe/85ff3125dd00dbf83b33470f06511096)
