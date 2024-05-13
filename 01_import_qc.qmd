@@ -151,7 +151,8 @@ sc.qc %>%
 ```{r}
 # Keep only the cells with nCount_RNA > 500 & nFeature_RNA < 4000 & percent.mt < 10
 sc.qc <- sc.qc %>%
-  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 5000 & percent.mt < 10, "keep", "remove"))
+  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 5000 & percent.mt < 10, "keep", "remove")) %>% 
+  mutate(er = ifelse(nCount_RNA > 3000 & nFeature_RNA < 600 & percent.mt < 10, "eritro", "no_eritro"))
 
 sc.qc %>% 
   dplyr::count(keep)
@@ -159,6 +160,12 @@ sc.qc %>%
 sc.qc %>% 
   ggplot() +
   geom_point(aes(nCount_RNA, nFeature_RNA, colour = keep), alpha = .30) +
+  scale_x_log10() +
+  scale_y_log10()
+
+sc.qc %>% 
+  ggplot() +
+  geom_point(aes(nCount_RNA, nFeature_RNA, colour = er), alpha = .30) +
   scale_x_log10() +
   scale_y_log10()
 
