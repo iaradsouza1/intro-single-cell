@@ -8,7 +8,7 @@ execute:
 
 ## Motivation
 
-A primordial task in a single-cell RNA-seq experiment is to determine the cell types in a sample. To do that, we can proceed with different approaches. In the **knowledge-based** (or **marker-based**) approach, we used previous validated information about cell markers to check which cells are enriched for this set of markers, infering that a given cluster of cells belong to that cell type. In this approach we heavily rely on previous knowledge of cell type markers. 
+A primordial task in a single-cell RNA-seq experiment is to determine the cell types in a sample. To do that, we can proceed with different approaches. In the **knowledge-based** (or **marker-based**) approach, we use previous validated information about cell markers to check which cells are enriched for this set of markers, inferring that a given cluster of cells belong to that cell type. In this approach we heavily rely on previous knowledge of cell type markers. 
 
 In some cases, it is hard to label cells based only on a small subset of markers. Also, some cell types do not have established markers, making it difficult to label them. Therefore, we can use the **reference-based** approach, which takes advantage of previous well-annotated resources, such as cell atlases, as a basis to classify each cell in a given cell type. In this reference-based approach, a matrix of cell gene expression (cells in columns and genes in rows) with defined cell types is the trained set and it is used to classify the cell types of another matrix. The reference matrix can be obtained from microarray experiments as well as bulk or single-cell RNA sequencing experiments.
 

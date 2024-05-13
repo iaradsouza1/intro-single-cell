@@ -106,15 +106,17 @@ sc.qc %>%
   geom_vline(aes(xintercept = median(sc.qc$nCount_RNA)), color = "red") +
   geom_histogram(aes(x = nCount_RNA), bins = 100)
 
-# Mean number of RNA molecules and genes per cell
+# Mean number of RNA molecules per cell
 summary(sc.qc$nCount_RNA)
-summary(sc.qc$nFeature_RNA)
 
 # Plot the distribution of features (genes) - all samples
 sc.qc %>%
   ggplot() +
   geom_vline(aes(xintercept = median(sc.qc$nFeature_RNA)), color = "red") +
   geom_histogram(aes(x = nFeature_RNA), bins = 200)
+
+# Mean number of genes per cell
+summary(sc.qc$nFeature_RNA)
 
 # Plot the distribution of features (genes) - by samples
 sc.qc %>%
@@ -147,9 +149,9 @@ sc.qc %>%
 ### Filter cells  
 
 ```{r}
-# Keep only the cells with nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10
+# Keep only the cells with nCount_RNA > 500 & nFeature_RNA < 4000 & percent.mt < 10
 sc.qc <- sc.qc %>%
-  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 4000 & percent.mt < 10, "keep", "remove"))
+  mutate(keep = if_else(nCount_RNA > 500 & nFeature_RNA < 5000 & percent.mt < 10, "keep", "remove"))
 
 sc.qc %>% 
   dplyr::count(keep)
@@ -160,7 +162,7 @@ sc.qc %>%
   scale_x_log10() +
   scale_y_log10()
 
-sc_qc <- subset(sc, nCount_RNA > 500 & nFeature_RNA < 8000 & percent.mt < 10)
+sc_qc <- subset(sc, nCount_RNA > 500 & nFeature_RNA < 5000 & percent.mt < 10)
 
 save(sc_qc, file = "results/sc_qc.rda")
 ```

@@ -1,7 +1,10 @@
-.Rproj.user
+.Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
+.git/
+.quarto/
+intro_files/
 *_cache/
 *_files/
 *.html
